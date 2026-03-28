@@ -29,7 +29,7 @@ st.markdown("""
 
 # 2. VERİLERİ YÜKLEME
 # Buraya sizin Google Sheets ID'nizi yapıştırdığınızdan emin olun!
-sheet_id = "BURAYA_KENDI_ID_NIZI_YAPISTIRIN" 
+sheet_id = "1hGIDYimZfmCqZhJESg_C0QzY-MpiV9r6p6q4qczEjCo" 
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 
 try:
