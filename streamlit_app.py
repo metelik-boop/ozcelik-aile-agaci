@@ -1,8 +1,7 @@
-
 import streamlit as st
 import pandas as pd
 
-# 1. SAYFA VE BAŞLIK AYARLARI
+# 1. SAYFA AYARLARI
 st.set_page_config(page_title="Özçelik Ailesi Soy Ağacı", layout="centered")
 
 st.markdown("""
@@ -11,76 +10,79 @@ st.markdown("""
         font-family: 'Times New Roman', serif;
         color: #4A2C2A;
         text-align: center;
-        font-size: 45px;
+        font-size: 40px;
         font-weight: bold;
         border-bottom: 2px solid #4A2C2A;
+        margin-bottom: 20px;
     }
     .kisi-kart {
         text-align: center;
         padding: 10px;
         border: 1px solid #ddd;
         border-radius: 10px;
-        background-color: #f9f9f9;
-        margin-bottom: 10px;
+        background-color: #ffffff;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
     </style>
     <div class="ana-baslik">ÖZÇELİK AİLESİ</div>
     """, unsafe_allow_html=True)
 
-# 2. VERİLERİ YÜKLEME
-# Buraya sizin Google Sheets ID'nizi yapıştırdığınızdan emin olun!
-sheet_id = "1hGIDYimZfmCqZhJESg_C0QzY-MpiV9r6p6q4qczEjCo" 
+# 2. VERİ YÜKLEME
+sheet_id = "BURAYA_KENDI_GOOGLE_SHEETS_ID_NIZI_YAPISTIRIN"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 
 try:
     df = pd.read_csv(url)
-    # Sütun isimlerindeki boşlukları temizleyelim ki hata vermesin
     df.columns = [c.strip().lower() for c in df.columns]
-except:
-    st.error("Veri tabanına bağlanılamadı. Lütfen Google Sheets ID'nizi kontrol edin.")
+    # Boş verileri temizleyelim
+    df = df.fillna("")
+except Exception as e:
+    st.error("Veri tabanı hatası. Lütfen ID ve Paylaşım ayarlarını kontrol edin.")
     st.stop()
 
-# 3. ANA EKRAN (KÖK AİLE - ID 1)
-st.write("## ") 
+# 3. KÖK AİLE (MAHMUT & FİRDEVS)
+# ID 1 olan kişiyi buluyoruz
+root = df[df['id'] == 1].iloc[0]
+
 col1, col2 = st.columns(2)
-
-# Tablonuzdaki ID sütununa göre ilk kişiyi (Mahmut) buluyoruz
-root_baba = df[df['id'] == 1].iloc[0]
-
 with col1:
-    st.markdown(f"""
-    <div class="kisi-kart">
-        <img src="https://via.placeholder.com/150" style="width:100%; border-radius:50%;">
-        <h3>{root_baba['isim'].upper()} {root_baba['soyadı'].upper()}</h3>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="kisi-kart"><h3>{root["isim"].upper()}</h3><p>BABA</p></div>', unsafe_allow_html=True)
 with col2:
-    st.markdown(f"""
-    <div class="kisi-kart">
-        <img src="https://via.placeholder.com/150" style="width:100%; border-radius:50%;">
-        <h3>{root_baba['eşinin adı'].upper()} {root_baba['soyadı'].upper()}</h3>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kisi-kart"><h3>{root["eşinin adı"].upper()}</h3><p>ANNE</p></div>', unsafe_allow_html=True)
 
-# 4. ÇOCUKLAR (TIKLAYINCA AÇILAN LİSTE)
 st.divider()
 
-# Mahmut'un çocuklarını bul (Baba adı Mahmut olanlar)
-cocuklar = df[df['baba adı'].str.lower() == root_baba['isim'].lower()]
+# 4. ÇOCUKLARI LİSTELEME (1. KUŞAK)
+# Kural: Babası Mahmut VE Annesi Firdevs olanlar
+kuşak_1 = df[(df['baba adı'].str.lower() == root['isim'].lower()) & 
+             (df['anne adı'].str.lower() == root['eşinin adı'].lower())]
 
-for index, cocuk in cocuklar.iterrows():
-    es = cocuk['eşinin adı'] if not pd.isna(cocuk['eşinin adı']) else "Eşi Yok"
-    with st.expander(f"📍 {cocuk['isim'].upper()} & {es.upper()} Ailesi"):
-        # Bu kısma tıkladığınızda o çocuğun bilgilerini ve varsa kendi çocuklarını gösterecek
-        st.write(f"**Doğum Tarihi:** {cocuk['doğum tarihi']}")
+for _, cocuk in kuşak_1.iterrows():
+    es_adi = cocuk['eşinin adı'] if cocuk['eşinin adı'] != "" else "Eşi Bilgisi Yok"
+    
+    # Başlıkta çocuk ve eşi
+    with st.expander(f"📍 {cocuk['isim'].upper()} & {es_adi.upper()} Ailesi"):
+        st.write(f"📅 **Doğum:** {cocuk['doğum tarihi']}")
         
-        # Torunları bul (Babası veya annesi bu çocuk olanlar)
-        torunlar = df[(df['baba adı'].str.lower() == cocuk['isim'].lower()) | 
-                      (df['anne adı'].str.lower() == cocuk['isim'].lower())]
+        # 5. TORUNLARI LİSTELEME (2. KUŞAK)
+        # KRİTİK DÜZELTME: Babası bu çocuk olan VE Annesi bu çocuğun eşi olanlar
+        torunlar = df[(df['baba adı'].str.lower() == cocuk['isim'].lower()) & 
+                      (df['anne adı'].str.lower() == es_adi.lower())]
         
         if not torunlar.empty:
             st.write("---")
             st.write("**Çocukları:**")
             for _, torun in torunlar.iterrows():
-                st.write(f"👤 {torun['isim'].upper()} ({torun['doğum tarihi']})")
+                # Torun kartı
+                st.info(f"👤 {torun['isim'].upper()} ({torun['doğum tarihi']})")
+                
+                # 6. TORUN ÇOCUKLARI (3. KUŞAK - Varsa)
+                torun_es = torun['eşinin adı'] if torun['eşinin adı'] != "" else ""
+                torun_cocuklar = df[(df['baba adı'].str.lower() == torun['isim'].lower()) & 
+                                    (df['anne adı'].str.lower() == torun_es.lower())]
+                
+                if not torun_cocuklar.empty:
+                    for _, t_cocuk in torun_cocuklar.iterrows():
+                        st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;↳ 👶 {t_cocuk['isim'].upper()} ({t_cocuk['doğum tarihi']})")
+        else:
+            st.write("_Bu kol için çocuk kaydı bulunamadı._")
