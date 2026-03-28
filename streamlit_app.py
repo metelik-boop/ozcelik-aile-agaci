@@ -34,14 +34,12 @@ url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 try:
     df = pd.read_csv(url)
     df.columns = [c.strip().lower() for c in df.columns]
-    # Boş verileri temizleyelim
     df = df.fillna("")
 except Exception as e:
-    st.error("Veri tabanı hatası. Lütfen ID ve Paylaşım ayarlarını kontrol edin.")
+    st.error("Veri tabanı hatası.")
     st.stop()
 
 # 3. KÖK AİLE (MAHMUT & FİRDEVS)
-# ID 1 olan kişiyi buluyoruz
 root = df[df['id'] == 1].iloc[0]
 
 col1, col2 = st.columns(2)
@@ -52,37 +50,34 @@ with col2:
 
 st.divider()
 
-# 4. ÇOCUKLARI LİSTELEME (1. KUŞAK)
-# Kural: Babası Mahmut VE Annesi Firdevs olanlar
+# 4. 1. KUŞAK (MAHMUT & FİRDEVS ÇOCUKLARI)
 kuşak_1 = df[(df['baba adı'].str.lower() == root['isim'].lower()) & 
              (df['anne adı'].str.lower() == root['eşinin adı'].lower())]
 
 for _, cocuk in kuşak_1.iterrows():
-    es_adi = cocuk['eşinin adı'] if cocuk['eşinin adı'] != "" else "Eşi Bilgisi Yok"
+    es_adi = cocuk['eşinin adı'] if cocuk['eşinin adı'] != "" else ""
     
-    # Başlıkta çocuk ve eşi
     with st.expander(f"📍 {cocuk['isim'].upper()} & {es_adi.upper()} Ailesi"):
         st.write(f"📅 **Doğum:** {cocuk['doğum tarihi']}")
         
-        # 5. TORUNLARI LİSTELEME (2. KUŞAK)
-        # KRİTİK DÜZELTME: Babası bu çocuk olan VE Annesi bu çocuğun eşi olanlar
-        torunlar = df[(df['baba adı'].str.lower() == cocuk['isim'].lower()) & 
-                      (df['anne adı'].str.lower() == es_adi.lower())]
+        # 5. 2. KUŞAK (Kız veya Erkek ayrımı yapmadan çocuklarını bulma)
+        # ÖNEMLİ: Burada hem "Babası bu kişi olanlar" VEYA "Annesi bu kişi olanlar" diye arıyoruz.
+        torunlar = df[(df['baba adı'].str.lower() == cocuk['isim'].lower()) | 
+                      (df['anne adı'].str.lower() == cocuk['isim'].lower())]
         
         if not torunlar.empty:
             st.write("---")
             st.write("**Çocukları:**")
             for _, torun in torunlar.iterrows():
-                # Torun kartı
-                st.info(f"👤 {torun['isim'].upper()} ({torun['doğum tarihi']})")
+                # Torun bilgisi
+                st.info(f"👤 {torun['isim'].upper()} {torun['soyadı'].upper()} ({torun['doğum tarihi']})")
                 
-                # 6. TORUN ÇOCUKLARI (3. KUŞAK - Varsa)
-                torun_es = torun['eşinin adı'] if torun['eşinin adı'] != "" else ""
-                torun_cocuklar = df[(df['baba adı'].str.lower() == torun['isim'].lower()) & 
-                                    (df['anne adı'].str.lower() == torun_es.lower())]
+                # 6. 3. KUŞAK (Torunların Çocukları)
+                torun_cocuklar = df[(df['baba adı'].str.lower() == torun['isim'].lower()) | 
+                                    (df['anne adı'].str.lower() == torun['isim'].lower())]
                 
                 if not torun_cocuklar.empty:
                     for _, t_cocuk in torun_cocuklar.iterrows():
-                        st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;↳ 👶 {t_cocuk['isim'].upper()} ({t_cocuk['doğum tarihi']})")
+                        st.write(f"&nbsp;&nbsp;&nbsp;&nbsp;↳ 👶 {t_cocuk['isim'].upper()} {t_cocuk['soyadı'].upper()} ({t_cocuk['doğum tarihi']})")
         else:
             st.write("_Bu kol için çocuk kaydı bulunamadı._")
