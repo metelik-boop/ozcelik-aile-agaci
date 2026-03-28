@@ -28,7 +28,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 2. VERİ YÜKLEME
-sheet_id = "BURAYA_KENDI_GOOGLE_SHEETS_ID_NIZI_YAPISTIRIN"
+sheet_id = "1hGIDYimZfmCqZhJESg_C0QzY-MpiV9r6p6q4qczEjCo"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 
 try:
